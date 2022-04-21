@@ -4,7 +4,8 @@ import threading
 import serial
 import time
 
-#from using command -----  dmesg | tail -f
+#from using command -----   
+# use ls /dev/*.
 ARDUINO_PORT = "/dev/ttyACM0"
 
 #ARDUINO_PORT = "COM4" # Should probably make this automatically look for the arduino in
@@ -55,10 +56,12 @@ class XboxController():
         d = self.B
         rb = self.RightBumper
 
-        return [a, b, c, d, x, y]
+        return [x, y, a, b, c, d]
 
     # Update the state varibles every time there is an event
     def _monitor_controller(self):
+        global con_in
+        con_in = ([0,0,0,0,0,0])
         while True:
             events = get_gamepad()
             for event in events:
@@ -98,6 +101,7 @@ class XboxController():
                 elif event.code == 'BTN_START':
                     self.Start = event.state
 
+                
                 ''' NOTE: OUR TEST GAVE DIFFERENT CODE NAMES FOR DPAD
                 elif event.code == 'BTN_TRIGGER_HAPPY1':
                     self.LeftDPad = event.state
@@ -108,13 +112,19 @@ class XboxController():
                 elif event.code == 'BTN_TRIGGER_HAPPY4':
                     self.DownDPad = event.state
                 '''
+
+                con_in2 = [self.LeftJoystickX, self.LeftJoystickY, self.A, self.X, self.Y, self.B]
+                for k in range(len(con_in)):
+                    if con_in2[k] > con_in[k]:
+                        con_in[k] = con_in2[k]
+
 # uses data from the gamepad to calculate motor power commands for the robot
 # TODO: implement this
 def motorPower(gamepadInputs):
     #print(gamepadInputs[0])
-    return (gamepadInputs[0], gamepadInputs[5]) #reads "a": 1/0; reads left joystick y value
+    #return gamepadInputs[0] #reads "a": 1/0
 
-    #return [0,0,0,0,0,0] # (front left, front right, back left, back right,
+    return [0,0,0,0,0,0] # (front left, front right, back left, back right,
                          #  up left, up right)
                          # ^ my suggested protocol for motor commands
                          # feel to interpret however.
@@ -128,36 +138,50 @@ def wait(ser, timeout):
             break
     print("receive wait: " + str(time.time() - t) + "s")
 
-#put the loop function in a big while loop with a try clause so the program automatically sleeps and restarts when an error is thrown
+
 if __name__ == '__main__':
-    # while True:
-        #try:
     controller = XboxController()
     ser = serial.Serial(ARDUINO_PORT, 9600, timeout=0.01)
 
     time.sleep(1)
 
     while True:
-        ser.reset_input_buffer()
-        ser.reset_output_buffer()
+        try:
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+            print(con_in)
+            message = con_in
+            message[0] = int(abs(con_in[0]-1)*100) # converts joystick values to 0-200
+            message[1] = int(abs(con_in[1]-1)*100) 
+            con_in = [0,0,0,0,0,0]
+            ser.write(message)
+            response = ser.readline()
+            if response != a:
+                print(response)
+            else:
+                print("recieved", time.strftime('%H:%M:%S', t)) 
+            time.sleep(1)
+        except:
+            print("Exception")
+            time.sleep(1)
 
-        raw = motorPower(controller.read())
-        instructions = [raw[0], int(abs(raw[1] - 1) * 100)]
-        if instructions[1] > 95 and instructions[1] < 105:
-            instructions[1] = 100 #if controller is just on the edge don't move anything
 
-        print("sending: " + str(instructions))
 
-        ser.write(bytearray(instructions)) #write a bytearray that takes a list of integers from 0 to 255
-        
 
-        time.sleep(.05)
-        
-        wait(ser, 2) #waits for arduino response for up to 2 seconds
 
-        response = ser.readline()
-        print(response)
 
-        # except:
-        #     print("error detected, waiting 1 sec")
-        #     time.sleep(1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
