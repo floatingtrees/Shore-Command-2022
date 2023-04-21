@@ -114,11 +114,16 @@ if __name__ == '__main__':
         self.RightBumper, self.LeftBumper, self.RightTrigger, self.LeftTrigger]'''
 
         raw, toggle_camera = controller.read() #9 inputs total for instructions
-
-        instructions = [raw[0], 100, 100, 100, 100, 100, 100] #set
+ 
+        instructions = [raw[0], 100, 100, 100, 100, 100, 100, 100] #set
 
         dx, dy = raw[1], raw[2]
+        turnx, turny = raw[3], raw[4]
         rt, lt = raw[7], raw[8]
+        if (raw[5] > 0.5):
+            instructions[7] = 0
+        elif (raw[6] > 0.5):
+            instructions[7] = 180
         if (abs(dx + dy) > 0.05):
             #x+y for -1 to 1, convert to 0 to 200 scale            
             instructions[1] =  (dx + dy) / ((abs(dx) + abs(dy)) / max(abs(dx), abs(dy)))
@@ -129,6 +134,9 @@ if __name__ == '__main__':
             instructions[3] =  (dx - dy) / ((abs(dx) + abs(dy)) / max(abs(dx), abs(dy)))
             instructions[3] = int(abs(instructions[3] - 1) * 100)
             instructions[4] = 200 - instructions[3]
+        #if (abs(turnx + turny) > 0.05):
+            #intructions[3] = instruction[3] * 0.
+            #intructions[3] = instruction[3] * 
         if (abs(rt) > 0.05 or abs(lt) > 0.05):
             instructions[2] = int(100 + (rt * 100) - (lt * 100))
             instructions[6] = instructions[2]
