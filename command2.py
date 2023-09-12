@@ -6,7 +6,7 @@ import time
 
 #from using command -----  dmesg | tail -f
 #ARDUINO_PORT = "/dev/ttyACM0"
-ARDUINO_PORT = "COM3"
+ARDUINO_PORT = "COM4"
 
 #ARDUINO_PORT = "COM4" # Should probably make this automatically look for the arduino in
               # the future, or at the very least make it fetch command line
@@ -98,17 +98,10 @@ def wait(ser, timeout):
             break
     print("receive wait: " + str(time.time() - t) + "s")
 
-def bound(num, minimum, maximum):
-    if (num < minimum):
-        return minimum
-    if (num > maximum):
-        return maximum
-    return int(num)
-
 #put the loop function in a big while loop with a try clause so the program automatically sleeps and restarts when an error is thrown
 if __name__ == '__main__':
     controller = XboxController()
-    ser = serial.Serial(ARDUINO_PORT, 9600, timeout=0.01)
+    ser = serial.Serial(ARDUINO_PORT, 9500, timeout=0.01)
 
     time.sleep(1)
 
@@ -125,9 +118,12 @@ if __name__ == '__main__':
         instructions = [raw[0], 100, 100, 100, 100, 100, 100, 100] #set
 
         dx, dy = raw[1], raw[2]
-        turn = raw[3]
+        turnx, turny = raw[3], raw[4]
         rt, lt = raw[7], raw[8]
-        rb, lb = raw[5], raw[6]
+        if (raw[5] > 0.5):
+            instructions[7] = 0
+        elif (raw[6] > 0.5):
+            instructions[7] = 180
         if (abs(dx + dy) > 0.05):
             #x+y for -1 to 1, convert to 0 to 200 scale            
             instructions[1] =  (dx + dy) / ((abs(dx) + abs(dy)) / max(abs(dx), abs(dy)))
@@ -138,34 +134,12 @@ if __name__ == '__main__':
             instructions[3] =  (dx - dy) / ((abs(dx) + abs(dy)) / max(abs(dx), abs(dy)))
             instructions[3] = int(abs(instructions[3] - 1) * 100)
             instructions[4] = 200 - instructions[3]
-        if (abs(turn) > 0.05):
-            instructions[3] *= 0.75
-            instructions[4] *= 0.75
-            instructions[1] *= 0.75
-            instructions[5] *= 0.75
-            if (turn > 0):
-                instructions[3] += 40
-                instructions[4] -= 40
-            elif (turn < 0):
-                instructions[1] += 40
-                instructions[5] -= 40
-
-            instructions[3] = bound(instructions[3], 0, 200)
-            instructions[4] = bound(instructions[4], 0, 200)
-            instructions[1] = bound(instructions[1], 0, 200)
-            instructions[5] = bound(instructions[5], 0, 200)
-
-            
+        #if (abs(turnx + turny) > 0.05):
             #intructions[3] = instruction[3] * 0.
             #intructions[3] = instruction[3] * 
         if (abs(rt) > 0.05 or abs(lt) > 0.05):
             instructions[2] = int(100 + (rt * 100) - (lt * 100))
             instructions[6] = instructions[2]
-        if (abs(lb) > 0.05 or abs(rb) > 0.05):
-            if (rb > 0):
-                instructions[2] = 200
-            elif (lb > 0):
-                instructions[2] = 0
 
         print("sending: " + str(instructions))
 
